@@ -107,6 +107,8 @@ export const EditContainer = () => {
     // 在组件的返回部分，找到适当位置添加保存按钮
     // 例如，可以在编辑器上方或工具栏中添加
     return (
+        <>
+            <NoteNav />
         <div>
             {/* 可能的工具栏位置 */}
             <div className="flex items-center justify-between mb-2">
