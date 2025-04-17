@@ -10,6 +10,8 @@ import useSettingsAPI from 'libs/web/api/settings';
 import dynamic from 'next/dynamic';
 import { useToast } from 'libs/web/hooks/use-toast';
 import DeleteAlert from 'components/editor/delete-alert';
+// 导入保存按钮组件
+import SaveButton from 'components/editor/save-button';
 
 const MainEditor = dynamic(() => import('components/editor/main-editor'));
 
@@ -19,7 +21,7 @@ export const EditContainer = () => {
         settings: { settings },
     } = UIState.useContainer();
     const { genNewId } = NoteTreeState.useContainer();
-    const { fetchNote, abortFindNote, findOrCreateNote, initNote, note } =
+    const { fetchNote, abortFindNote, findOrCreateNote, initNote, note, saveNote, hasUnsavedChanges } =
         NoteState.useContainer();
     const { query } = useRouter();
     const pid = query.pid as string;
@@ -97,13 +99,26 @@ export const EditContainer = () => {
         updateTitle(note?.title);
     }, [note?.title, updateTitle]);
 
+    // 添加保存按钮的处理函数
+    const handleSave = useCallback(() => {
+        saveNote();
+    }, [saveNote]);
+
+    // 在组件的返回部分，找到适当位置添加保存按钮
+    // 例如，可以在编辑器上方或工具栏中添加
     return (
-        <>
-            <NoteNav />
+        <div>
+            {/* 可能的工具栏位置 */}
+            <div className="flex items-center justify-between mb-2">
+                {/* 现有UI元素 */}
+                <div className="flex items-center">
+                    <SaveButton onSave={handleSave} disabled={!hasUnsavedChanges} />
+                </div>
+            </div>
+            
             <DeleteAlert />
-            <section className="h-full">
-                <MainEditor note={note} />
-            </section>
-        </>
+            <MainEditor />
+            {/* 其他UI元素 */}
+        </div>
     );
 };
