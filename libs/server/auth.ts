@@ -3,7 +3,7 @@ import {
     BasicAuthConfiguration,
     config,
     Configuration,
-} from 'libs/server/config';
+} from './config';
 
 export const NO_UID = '' as const;
 export type AuthenticationData = { uid: string };
