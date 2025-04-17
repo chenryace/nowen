@@ -16,6 +16,10 @@ const useNote = (initData?: NoteModel) => {
     const { addItem, removeItem, mutateItem, genNewId } =
         NoteTreeState.useContainer();
     const toast = useToast();
+    // 添加状态跟踪未保存的更改
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+    // 添加状态存储待保存的内容
+    const [pendingChanges, setPendingChanges] = useState<Partial<NoteModel>>({});
 
     const fetchNote = useCallback(
         async (id: string) => {
@@ -136,9 +140,11 @@ const useNote = (initData?: NoteModel) => {
         [addItem, create, genNewId]
     );
 
+    // 删除这个原始的updateNote函数
     /**
      * TODO: merge with mutateNote
      */
+    /* 删除这个函数
     const updateNote = useCallback(
         async (data: Partial<NoteModel>) => {
             abort();
@@ -161,6 +167,7 @@ const useNote = (initData?: NoteModel) => {
         },
         [abort, toast, note, mutate, mutateItem]
     );
+    */
 
     const initNote = useCallback((note: Partial<NoteModel>) => {
         setNote({
@@ -191,21 +198,77 @@ const useNote = (initData?: NoteModel) => {
         [createNote, fetchNote]
     );
 
+    // 修改updateNote函数，只更新本地状态而不发送API请求
+    const updateNote = useCallback(
+        (payload: Partial<NoteModel>) => {
+            if (!note?.id) {
+                return;
+            }
+
+            // 更新本地状态
+            setNote((prev) => {
+                if (prev) {
+                    return { ...prev, ...payload };
+                }
+                return prev;
+            });
+
+            // 记录待保存的更改
+            setPendingChanges((prev) => ({
+                ...prev,
+                ...payload,
+            }));
+            
+            // 标记有未保存的更改
+            setHasUnsavedChanges(true);
+        },
+        [note?.id]
+    );
+
+    // 添加手动保存函数
+    const saveNote = useCallback(async () => {
+        if (!note?.id || !hasUnsavedChanges || isEmpty(pendingChanges)) {
+            return;
+        }
+
+        try {
+            // 调用API保存笔记
+            await mutate(note.id, pendingChanges);
+            
+            // 更新缓存
+            await noteCache.mutateItem(note.id, pendingChanges);
+            
+            // 更新树状态（如果标题变更）
+            if (pendingChanges.title) {
+                mutateItem(note.id, { title: pendingChanges.title });
+            }
+            
+            // 重置未保存状态
+            setHasUnsavedChanges(false);
+            setPendingChanges({});
+            
+            toast('保存成功');
+        } catch (error) {
+            toast('保存失败', 'error');
+            console.error('Failed to save note:', error);
+        }
+    }, [note?.id, hasUnsavedChanges, pendingChanges, mutate, mutateItem, toast]);
+
     return {
         note,
         fetchNote,
         abortFindNote,
-        createNote,
         findOrCreateNote,
-        createNoteWithTitle,
-        updateNote,
-        removeNote,
-        mutateNote,
         initNote,
+        createNote,
+        createError,
+        updateNote,
+        mutateNote,
         loading,
+        abort,
+        saveNote,           // 新增：手动保存函数
+        hasUnsavedChanges,  // 新增：未保存状态标志
     };
 };
 
-const NoteState = createContainer(useNote);
-
-export default NoteState;
+export default createContainer(useNote);
