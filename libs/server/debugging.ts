@@ -1,103 +1,69 @@
-import { loadConfigAndListErrors } from 'libs/server/config';
-import pino from 'pino';
-import pinoPretty from 'pino-pretty';
-import * as path from 'path';
-import * as fs from 'fs';
-import { coerceToValidCause, DebugInformation, Issue, IssueCategory, IssueSeverity } from 'libs/shared/debugging';
-import Logger = pino.Logger;
+F12报错
 
-export * from 'libs/shared/debugging'; // here's a lil' lesson in trickery
+Failed to load resource: the server responded with a status of 504 ()
 
-const serialRuntimeIssues: Array<Issue> = [];
-const keyedRuntimeIssues: Record<keyof any, Issue | undefined> = {};
-export function reportRuntimeIssue(issue: Issue) {
-    const complete = {
-        ...issue,
-        isRuntime: true
-    };
-    serialRuntimeIssues.push(complete);
-}
-export function setKeyedRuntimeIssue(key: keyof typeof keyedRuntimeIssues, issue: Issue | null) {
-    if (issue === null) {
-        delete keyedRuntimeIssues[key];
-    } else {
-        keyedRuntimeIssues[key] = issue;
-    }
-}
-function getAllKeyedRuntimeIssues(): Array<Issue> {
-    const values: Array<Issue> = [];
-    Object.values(keyedRuntimeIssues).forEach((v) => {
-        if (v != undefined) { // non-strict equality because that's better for null checks
-            values.push(v);
-        }
-    });
-    return values;
-}
+runlog有记录
 
-export function findIssues(): Array<Issue> {
-    const issues: Array<Issue> = [];
+No file logs: Error: ENOENT: no such file or directory, mkdir '/var/task/logs'
 
-    try {
-        const cfg = loadConfigAndListErrors();
-        issues.push(...cfg.errors);
-    } catch (e) {
-        issues.push({
-            severity: IssueSeverity.FATAL_ERROR,
-            category: IssueCategory.CONFIG,
-            name: "Cannot load config",
-            cause: coerceToValidCause(e),
-            fixes: []
-        });
-    }
+at Object.mkdirSync (node:fs:1391:3)
 
-    issues.push(...serialRuntimeIssues, ...getAllKeyedRuntimeIssues());
+at getLogFile (/var/task/.next/server/chunks/300.js:409:41)
 
-    return issues;
+at /var/task/.next/server/chunks/300.js:423:67
+
+at __webpack_require__.a (/var/task/.next/server/webpack-runtime.js:89:13)
+
+at 4249 (/var/task/.next/server/chunks/300.js:327:21)
+
+at __webpack_require__ (/var/task/.next/server/webpack-runtime.js:25:42)
+
+at /var/task/.next/server/chunks/300.js:19:79
+
+at __webpack_require__.a (/var/task/.next/server/webpack-runtime.js:89:13)
+
+at 9668 (/var/task/.next/server/chunks/300.js:9:21)
+
+at __webpack_require__ (/var/task/.next/server/webpack-runtime.js:25:42) {
+
+errno: -2,
+
+syscall: 'mkdir',
+
+code: 'ENOENT',
+
+path: '/var/task/logs'
+
 }
 
-export function collectDebugInformation(): DebugInformation {
-    const issues = findIssues();
-    return {
-        issues,
-        logs: []
-    };
+No file logs: Error: ENOENT: no such file or directory, mkdir '/var/task/logs'
+
+at Object.mkdirSync (node:fs:1391:3)
+
+at getLogFile (/var/task/.next/server/chunks/446.js:407:41)
+
+at /var/task/.next/server/chunks/446.js:421:67
+
+at __webpack_require__.a (/var/task/.next/server/webpack-api-runtime.js:89:13)
+
+at 6090 (/var/task/.next/server/chunks/446.js:326:21)
+
+at __webpack_require__ (/var/task/.next/server/webpack-api-runtime.js:25:42)
+
+at /var/task/.next/server/chunks/446.js:18:79
+
+at __webpack_require__.a (/var/task/.next/server/webpack-api-runtime.js:89:13)
+
+at 5067 (/var/task/.next/server/chunks/446.js:9:21)
+
+at __webpack_require__ (/var/task/.next/server/webpack-api-runtime.js:25:42) {
+
+errno: -2,
+
+syscall: 'mkdir',
+
+code: 'ENOENT',
+
+path: '/var/task/logs'
+
 }
-
-function getLogFile(name: string) {
-    const dir = path.resolve(process.cwd(), process.env.LOG_DIRECTORY ?? 'logs');
-
-    if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, {
-            recursive: true
-        });
-    }
-
-    return path.resolve(dir, `${name}.log`);
-}
-
-const loggerTransport: Parameters<typeof pino.multistream>[0] = [
-    {
-        stream: pinoPretty(),
-        level: "info"
-    }
-];
-try {
-    loggerTransport.push({
-        stream: fs.createWriteStream(getLogFile('debug'), { flags: 'a' }),
-        level: "debug"
-    });
-} catch (e) {
-    // well, whoops!
-    console.warn("No file logs: %O", e);
-}
-
-const multistream = pino.multistream(loggerTransport);
-
-export function createLogger(name: string): Logger {
-    return pino({
-        name,
-        level: "trace",
-    }, multistream);
-}
-
-export type { Logger };
