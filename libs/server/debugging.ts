@@ -1,69 +1,116 @@
-F12报错
+import { loadConfigAndListErrors } from 'libs/server/config';
+import pino from 'pino';
+import pinoPretty from 'pino-pretty';
+import * as path from 'path';
+import * as fs from 'fs';
+import { coerceToValidCause, DebugInformation, Issue, IssueCategory, IssueSeverity } from 'libs/shared/debugging';
+import Logger = pino.Logger;
 
-Failed to load resource: the server responded with a status of 504 ()
+export * from 'libs/shared/debugging'; // here's a lil' lesson in trickery
 
-runlog有记录
-
-No file logs: Error: ENOENT: no such file or directory, mkdir '/var/task/logs'
-
-at Object.mkdirSync (node:fs:1391:3)
-
-at getLogFile (/var/task/.next/server/chunks/300.js:409:41)
-
-at /var/task/.next/server/chunks/300.js:423:67
-
-at __webpack_require__.a (/var/task/.next/server/webpack-runtime.js:89:13)
-
-at 4249 (/var/task/.next/server/chunks/300.js:327:21)
-
-at __webpack_require__ (/var/task/.next/server/webpack-runtime.js:25:42)
-
-at /var/task/.next/server/chunks/300.js:19:79
-
-at __webpack_require__.a (/var/task/.next/server/webpack-runtime.js:89:13)
-
-at 9668 (/var/task/.next/server/chunks/300.js:9:21)
-
-at __webpack_require__ (/var/task/.next/server/webpack-runtime.js:25:42) {
-
-errno: -2,
-
-syscall: 'mkdir',
-
-code: 'ENOENT',
-
-path: '/var/task/logs'
-
+const serialRuntimeIssues: Array<Issue> = [];
+const keyedRuntimeIssues: Record<keyof any, Issue | undefined> = {};
+export function reportRuntimeIssue(issue: Issue) {
+    const complete = {
+        ...issue,
+        isRuntime: true
+    };
+    serialRuntimeIssues.push(complete);
+}
+export function setKeyedRuntimeIssue(key: keyof typeof keyedRuntimeIssues, issue: Issue | null) {
+    if (issue === null) {
+        delete keyedRuntimeIssues[key];
+    } else {
+        keyedRuntimeIssues[key] = issue;
+    }
+}
+function getAllKeyedRuntimeIssues(): Array<Issue> {
+    const values: Array<Issue> = [];
+    Object.values(keyedRuntimeIssues).forEach((v) => {
+        if (v != undefined) { // non-strict equality because that's better for null checks
+            values.push(v);
+        }
+    });
+    return values;
 }
 
-No file logs: Error: ENOENT: no such file or directory, mkdir '/var/task/logs'
+export function findIssues(): Array<Issue> {
+    const issues: Array<Issue> = [];
 
-at Object.mkdirSync (node:fs:1391:3)
+    try {
+        const cfg = loadConfigAndListErrors();
+        issues.push(...cfg.errors);
+    } catch (e) {
+        issues.push({
+            severity: IssueSeverity.FATAL_ERROR,
+            category: IssueCategory.CONFIG,
+            name: "Cannot load config",
+            cause: coerceToValidCause(e),
+            fixes: []
+        });
+    }
 
-at getLogFile (/var/task/.next/server/chunks/446.js:407:41)
+    issues.push(...serialRuntimeIssues, ...getAllKeyedRuntimeIssues());
 
-at /var/task/.next/server/chunks/446.js:421:67
-
-at __webpack_require__.a (/var/task/.next/server/webpack-api-runtime.js:89:13)
-
-at 6090 (/var/task/.next/server/chunks/446.js:326:21)
-
-at __webpack_require__ (/var/task/.next/server/webpack-api-runtime.js:25:42)
-
-at /var/task/.next/server/chunks/446.js:18:79
-
-at __webpack_require__.a (/var/task/.next/server/webpack-api-runtime.js:89:13)
-
-at 5067 (/var/task/.next/server/chunks/446.js:9:21)
-
-at __webpack_require__ (/var/task/.next/server/webpack-api-runtime.js:25:42) {
-
-errno: -2,
-
-syscall: 'mkdir',
-
-code: 'ENOENT',
-
-path: '/var/task/logs'
-
+    return issues;
 }
+
+export function collectDebugInformation(): DebugInformation {
+    const issues = findIssues();
+    return {
+        issues,
+        logs: []
+    };
+}
+
+function getLogFile(name: string) {
+    // 检测是否在Vercel或其他无服务器环境中运行
+    const isServerlessEnvironment = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
+    
+    // 如果在无服务器环境中，返回null表示不使用文件日志
+    if (isServerlessEnvironment) {
+        return null;
+    }
+    
+    const dir = path.resolve(process.cwd(), process.env.LOG_DIRECTORY ?? 'logs');
+
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, {
+            recursive: true
+        });
+    }
+
+    return path.resolve(dir, `${name}.log`);
+}
+
+const loggerTransport: Parameters<typeof pino.multistream>[0] = [
+    {
+        stream: pinoPretty(),
+        level: "info"
+    }
+];
+try {
+    const logFile = getLogFile('debug');
+    if (logFile !== null) {
+        loggerTransport.push({
+            stream: fs.createWriteStream(logFile, { flags: 'a' }),
+            level: "debug"
+        });
+    } else {
+        console.log("File logging disabled in serverless environment");
+    }
+} catch (e) {
+    // well, whoops!
+    console.warn("No file logs: %O", e);
+}
+
+const multistream = pino.multistream(loggerTransport);
+
+export function createLogger(name: string): Logger {
+    return pino({
+        name,
+        level: "trace",
+    }, multistream);
+}
+
+export type { Logger };
