@@ -48,7 +48,7 @@ const useEditor = (initNote?: NoteModel) => {
         ua: { isBrowser },
     } = UIState.useContainer();
     const router = useRouter();
-const { request: _request, error: _error } = useFetcher();
+    const { request, error } = useFetcher();
     const toast = useToast();
     const editorEl = useRef<MarkdownEditor>(null);
 
@@ -97,37 +97,13 @@ const { request: _request, error: _error } = useFetcher();
     );
 
     // 移除S3图片上传功能，改为提示用户使用Markdown语法引用外部图片
-     const onUploadImage = useCallback(
-         async (file: File, id?: string) => {
-             try {
-                 const data = new FormData();
-                 data.append('file', file);
- 
-                 toast('正在上传图片...', 'info');
- 
-                 const result = await _request<FormData, { url: string }>(
-                     {
-                         method: 'POST',
-                         url: `/api/upload?id=${id}`,
-                     },
-                     data
-                 );
- 
-                 if (!result) {
-                     toast(_error || '上传图片失败', 'error');
-                     throw Error(_error || '上传图片失败');
-                 }
- 
-                 toast('图片上传成功', 'success');
-                 return result.url;
-             } catch (err) {
-                 console.error('上传图片时出错:', err);
-                 toast('上传图片失败，请重试', 'error');
-                 throw err;
-             }
-         },
-         [_error, _request, toast]
-     );
+    const onUploadImage = useCallback(
+        async (_file: File, _id?: string) => {
+            toast('图片上传功能已禁用，请使用 ![](图片链接) 语法引用外部图片', 'error');
+            throw new Error('图片上传功能已禁用');
+        },
+        [toast]
+    );
 
     const { preview, linkToolbar } = PortalState.useContainer();
 
