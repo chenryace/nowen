@@ -7,7 +7,6 @@ import {
     useRef,
 } from 'react';
 import { searchNote, searchRangeText } from 'libs/web/utils/search';
-import useFetcher from 'libs/web/api/fetcher';
 import { NOTE_DELETED } from 'libs/shared/meta';
 import { isNoteLink, NoteModel } from 'libs/shared/note';
 import { useToast } from 'libs/web/hooks/use-toast';
