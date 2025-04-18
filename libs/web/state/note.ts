@@ -239,10 +239,11 @@ const useNote = (initData?: NoteModel) => {
             await noteCache.mutateItem(note.id, pendingChanges);
             
             // 更新树状态（如果标题变更）
-            if (pendingChanges.title) {
-                // 修复：使用正确的数据结构更新树项
+            if (pendingChanges.title && note) {
+                // 修复：传递完整的note对象，并更新title
                 mutateItem(note.id, {
                     data: {
+                        ...note,
                         title: pendingChanges.title
                     }
                 });
@@ -257,7 +258,7 @@ const useNote = (initData?: NoteModel) => {
             toast('保存失败', 'error');
             console.error('Failed to save note:', error);
         }
-    }, [note?.id, hasUnsavedChanges, pendingChanges, mutate, mutateItem, toast]);
+    }, [note, hasUnsavedChanges, pendingChanges, mutate, mutateItem, toast]);
 
     return {
         note,
