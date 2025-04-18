@@ -266,8 +266,9 @@ const useNote = (initData?: NoteModel) => {
         mutateNote,
         loading,
         abort,
-        saveNote,           // 新增：手动保存函数
-        hasUnsavedChanges,  // 新增：未保存状态标志
+        saveNote,           
+        hasUnsavedChanges,  
+        removeNote,         // 添加这一行，导出 removeNote 函数
     };
 };
 
