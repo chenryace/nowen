@@ -48,7 +48,7 @@ const useEditor = (initNote?: NoteModel) => {
         ua: { isBrowser },
     } = UIState.useContainer();
     const router = useRouter();
-    const fetcher = useFetcher();
+    const { _request: _, _error: __ } = useFetcher();
     const toast = useToast();
     const editorEl = useRef<MarkdownEditor>(null);
 
