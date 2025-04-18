@@ -230,7 +230,7 @@ const useNote = (initData?: NoteModel) => {
         if (!note?.id || !hasUnsavedChanges || isEmpty(pendingChanges)) {
             return;
         }
-
+    
         try {
             // 调用API保存笔记
             await mutate(note.id, pendingChanges);
@@ -240,7 +240,12 @@ const useNote = (initData?: NoteModel) => {
             
             // 更新树状态（如果标题变更）
             if (pendingChanges.title) {
-                mutateItem(note.id, { title: pendingChanges.title });
+                // 修复：使用正确的数据结构更新树项
+                mutateItem(note.id, {
+                    data: {
+                        title: pendingChanges.title
+                    }
+                });
             }
             
             // 重置未保存状态
