@@ -12,14 +12,14 @@ const SaveButton: React.FC<SaveButtonProps> = ({ onSave, disabled }) => {
     const { t } = useI18n();
     
     return (
-        <Button 
-            variant="contained" 
-            color="primary" 
+        <Button
+            variant="contained"
+            color="primary"
             startIcon={<SaveOutlined />}
             onClick={onSave}
             disabled={disabled}
             size="small"
-            className="ml-2"
+            style={{ marginRight: '8px' }}
         >
             {t('Save')}
         </Button>
