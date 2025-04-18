@@ -268,7 +268,8 @@ const useNote = (initData?: NoteModel) => {
         abort,
         saveNote,           
         hasUnsavedChanges,  
-        removeNote,         // 添加这一行，导出 removeNote 函数
+        removeNote,         
+        createNoteWithTitle, // Add this line to export the createNoteWithTitle function
     };
 };
 
