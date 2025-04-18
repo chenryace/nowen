@@ -3,7 +3,7 @@ import { has } from 'lodash';
 import router, { useRouter } from 'next/router';
 import { useCallback, useEffect } from 'react';
 import NoteTreeState from 'libs/web/state/tree';
-import NoteNav from 'components/note-nav';
+import NoteNav from 'components/note-nav';  // 保留这个导入
 import UIState from 'libs/web/state/ui';
 import noteCache from 'libs/web/cache/note';
 import useSettingsAPI from 'libs/web/api/settings';
@@ -104,21 +104,23 @@ export const EditContainer = () => {
         saveNote();
     }, [saveNote]);
 
-    // 在组件的返回部分，找到适当位置添加保存按钮
-    // 例如，可以在编辑器上方或工具栏中添加
+    // 在组件的返回部分，恢复使用 NoteNav 组件
     return (
-        <div>
-            {/* 可能的工具栏位置 */}
-            <div className="flex items-center justify-between mb-2">
-                {/* 现有UI元素 */}
-                <div className="flex items-center">
-                    <SaveButton onSave={handleSave} disabled={!hasUnsavedChanges} />
+        <>
+            <NoteNav />
+            <div>
+                {/* 可能的工具栏位置 */}
+                <div className="flex items-center justify-between mb-2">
+                    {/* 现有UI元素 */}
+                    <div className="flex items-center">
+                        <SaveButton onSave={handleSave} disabled={!hasUnsavedChanges} />
+                    </div>
                 </div>
+                
+                <DeleteAlert />
+                <MainEditor />
+                {/* 其他UI元素 */}
             </div>
-            
-            <DeleteAlert />
-            <MainEditor />
-            {/* 其他UI元素 */}
-        </div>
+        </>
     );
 };
